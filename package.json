@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@mysten/dapp-kit": "^0.18.0",
-    "@mysten/enoki": "^0.3.0",
+    "@mysten/enoki": "^0.3.17",
     "@mysten/sui.js": "^0.54.1",
     "@mysten/zklogin": "^0.8.1",
     "@radix-ui/react-dialog": "^1.0.5",

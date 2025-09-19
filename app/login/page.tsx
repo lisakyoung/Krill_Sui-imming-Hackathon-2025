@@ -1,35 +1,67 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { Sparkles } from "lucide-react";
-import { GlowingButton } from "@/components/ui/GlowingButton";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
+import ZkLoginService from "@/lib/sui/zkLogin";
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
+  // ZkLoginService를 한 번만 생성하여 재사용합니다.
+  const [zkLoginService] = useState(() => new ZkLoginService());
+  const authHandled = useRef(false);
 
+  // 1. 구글 OAuth redirect 이후 처리
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      // StrictMode의 이중 호출을 방지하기 위해,
+      // 아직 처리되지 않았고 URL에 id_token이 있을 때만 실행합니다.
+      if (!authHandled.current && window.location.hash.includes("id_token")) {
+        // 재진입을 막기 위해 플래그를 즉시 true로 설정합니다.
+        authHandled.current = true;
+        setIsLoading(true);
+
+        try {
+          // ZkLoginService를 통해 로그인 완료 처리를 합니다.
+          const userData = await zkLoginService.completeZkLogin();
+
+          // auth store에 사용자 정보를 저장합니다.
+          // ZkLoginService가 반환하는 객체에는 userAddress, email, name 등이 포함됩니다.
+          login({
+            userAddress: userData.userAddress,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+          });
+
+          toast.success("Welcome to Krill!");
+          router.replace("/dashboard"); // URL hash 정리 후 대시보드 이동
+        } catch (error) {
+          console.error("Login completion error:", error);
+          toast.error("Failed to complete login.");
+          setIsLoading(false);
+        }
+      }
+    };
+
+    handleAuthCallback();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 2. 구글 로그인 시작
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      // Simulate login for now
-      setTimeout(() => {
-        login({
-          userAddress: "0x1234...5678",
-          email: "demo@example.com",
-          name: "Demo User",
-        });
-        toast.success("Welcome to Krill!");
-        router.push("/dashboard");
-      }, 2000);
+      // ZkLoginService를 통해 Google 인증 URL을 생성하고 리디렉션합니다.
+      const loginUrl = await zkLoginService.beginZkLogin();
+      window.location.href = loginUrl;
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("Failed to login");
       setIsLoading(false);
     }
   };
@@ -41,6 +73,7 @@ export default function LoginPage() {
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-md w-full"
       >
+        {/* 헤더 */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -56,6 +89,7 @@ export default function LoginPage() {
           <p className="text-gray-400">The Living Creator Economy</p>
         </motion.div>
 
+        {/* 로그인 카드 */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -88,7 +122,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-4 bg-slate-950 text-gray-400">
-                  Powered by zkLogin
+                  Powered by Enoki zkLogin
                 </span>
               </div>
             </div>
@@ -125,6 +159,7 @@ export default function LoginPage() {
           </p>
         </motion.div>
 
+        {/* 홈으로 돌아가기 */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
