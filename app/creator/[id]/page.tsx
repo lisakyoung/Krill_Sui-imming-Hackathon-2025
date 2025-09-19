@@ -1,68 +1,141 @@
 "use client";
 
-import { use } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import MainLayout from "@/components/layouts/MainLayout";
 import { motion } from "framer-motion";
-import { GlowingButton } from "@/components/ui/GlowingButton";
 import {
-  TrendingUp,
-  Users,
-  Star,
-  Clock,
-  Share2,
-  Heart,
-  MessageCircle,
   ArrowLeft,
+  Users,
+  TrendingUp,
+  Clock,
+  Gavel,
+  Star,
+  Share2,
+  Bell,
+  DollarSign,
+  Eye,
+  Heart,
+  Play,
+  Maximize2,
+  Volume2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { GlowingButton } from "@/components/ui/GlowingButton";
+import toast from "react-hot-toast";
 
-const chartData = [
-  { time: "Jan", price: 20 },
-  { time: "Feb", price: 25 },
-  { time: "Mar", price: 22 },
-  { time: "Apr", price: 30 },
-  { time: "May", price: 35 },
-  { time: "Jun", price: 45 },
-];
-
-export default function CreatorDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function CreatorProfilePage() {
   const router = useRouter();
-  const resolvedParams = use(params);
-  const creatorId = resolvedParams.id;
+  const params = useParams();
+  const creatorId = params.id as string;
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [uploadedContent, setUploadedContent] = useState<any>(null);
 
-  // Mock creator data
-  const creator = {
-    id: creatorId,
-    name: "Alex Rivers",
-    bio: "Digital artist and content creator exploring the boundaries of Web3 creativity.",
-    avatar: "/api/placeholder/200/200",
-    banner: "/api/placeholder/1200/300",
-    subscribers: 12500,
-    stockPrice: 45.2,
-    priceChange: 12.5,
-    evolutionLevel: 23,
-    activeVaults: 5,
-    totalContent: 234,
-    joined: "Jan 2024",
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("creatorProfile");
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      if (profile.uploadedContent) {
+        setUploadedContent(profile.uploadedContent);
+      }
+    }
+  }, []);
+
+  const creators: { [key: string]: any } = {
+    "1": {
+      name: "Alex Rivers",
+      bio: "Digital artist pushing boundaries of creativity",
+      avatar: "A",
+      sharePrice: 45.2,
+      change: 12.5,
+      subscribers: 12500,
+      evolutionLevel: 23,
+      vaults: 5,
+      category: "Music",
+    },
+    "2": {
+      name: "Luna Park",
+      bio: "Creating immersive experiences through art",
+      avatar: "L",
+      sharePrice: 32.15,
+      change: 5.2,
+      subscribers: 8900,
+      evolutionLevel: 18,
+      vaults: 3,
+      category: "Art",
+    },
+  };
+
+  const creator = creators[creatorId] || creators["1"];
+
+  const contents = [
+    ...(uploadedContent && creatorId === "1"
+      ? [
+          {
+            id: "uploaded",
+            title: uploadedContent.title || "My Latest Creation",
+            views: 2100,
+            likes: 180,
+            evolution: 1,
+            type: uploadedContent.type,
+            url: uploadedContent.url,
+            isNew: true,
+          },
+        ]
+      : []),
+    {
+      id: 1,
+      title: "Genesis Collection",
+      views: 45600,
+      likes: 3800,
+      evolution: 12,
+      type: "video",
+    },
+    {
+      id: 2,
+      title: "Time Vault Special",
+      views: 38900,
+      likes: 2900,
+      evolution: 9,
+      type: "image",
+    },
+    {
+      id: 3,
+      title: "Community Choice",
+      views: 31200,
+      likes: 2100,
+      evolution: 15,
+      type: "audio",
+    },
+  ];
+
+  const handleInvest = () => {
+    router.push(`/invest/${creatorId}`);
+  };
+
+  const handleJoinAuction = () => {
+    router.push(`/auction/${creatorId}`);
+  };
+
+  const handleSubscribe = () => {
+    setIsSubscribed(!isSubscribed);
+    const currentSubs = parseInt(
+      localStorage.getItem("totalSubscribers") || "1234"
+    );
+    localStorage.setItem(
+      "totalSubscribers",
+      (currentSubs + (isSubscribed ? -1 : 1)).toString()
+    );
+    toast.success(isSubscribed ? "Unsubscribed" : "Subscribed successfully!");
+  };
+
+  const handleContentClick = (content: any) => {
+    localStorage.setItem("selectedContent", JSON.stringify(content));
+    router.push(`/content-view/${content.id}`);
   };
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
+      <div className="max-w-6xl mx-auto">
         <button
           onClick={() => router.back()}
           className="flex items-center space-x-2 text-gray-400 hover:text-white transition mb-6"
@@ -71,173 +144,165 @@ export default function CreatorDetailPage({
           <span>Back</span>
         </button>
 
-        {/* Banner */}
-        <div className="relative h-64 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-2xl overflow-hidden mb-8">
-          <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute bottom-6 left-6 flex items-end space-x-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-1">
-              <div className="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center">
+        <div className="glass-effect rounded-2xl p-8 mb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
                 <span className="text-4xl font-bold text-white">
-                  {creator.name.charAt(0)}
+                  {creator.avatar}
                 </span>
               </div>
-            </div>
-            <div className="pb-2">
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {creator.name}
-              </h1>
-              <p className="text-gray-300">{creator.bio}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          {[
-            {
-              label: "Stock Price",
-              value: `$${creator.stockPrice}`,
-              change: `+${creator.priceChange}%`,
-            },
-            {
-              label: "Subscribers",
-              value: creator.subscribers.toLocaleString(),
-              change: "+234",
-            },
-            {
-              label: "Evolution Level",
-              value: `Lv.${creator.evolutionLevel}`,
-              change: "+2",
-            },
-            {
-              label: "Active Vaults",
-              value: creator.activeVaults,
-              change: null,
-            },
-            {
-              label: "Total Content",
-              value: creator.totalContent,
-              change: "+12",
-            },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="glass-effect rounded-xl p-4"
-            >
-              <p className="text-sm text-gray-400 mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              {stat.change && (
-                <p className="text-xs text-green-400 mt-1">{stat.change}</p>
-              )}
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chart */}
-          <div className="lg:col-span-2 glass-effect rounded-2xl p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Stock Performance
-            </h2>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="time" stroke="#6B7280" />
-                  <YAxis stroke="#6B7280" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                    }}
-                    labelStyle={{ color: "#9CA3AF" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    stroke="#8B5CF6"
-                    strokeWidth={2}
-                    dot={{ fill: "#8B5CF6", r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="glass-effect rounded-2xl p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Quick Actions
-            </h2>
-            <div className="space-y-3">
-              <GlowingButton className="w-full">Buy Stock</GlowingButton>
-              <button className="w-full py-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition">
-                Subscribe
-              </button>
-              <button className="w-full py-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition">
-                Join Auction
-              </button>
-              <button className="w-full py-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition">
-                View Evolution Tree
-              </button>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="flex justify-around">
-                <button className="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                  <Heart className="w-5 h-5" />
-                  <span className="text-xs">Like</span>
-                </button>
-                <button className="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="text-xs">Comment</span>
-                </button>
-                <button className="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                  <Share2 className="w-5 h-5" />
-                  <span className="text-xs">Share</span>
-                </button>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  {creator.name}
+                </h1>
+                <p className="text-gray-400 mb-4">{creator.bio}</p>
+                <div className="flex items-center space-x-4">
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                    {creator.category}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    Level {creator.evolutionLevel}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="flex space-x-3">
+              <button className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition">
+                <Share2 className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={handleSubscribe}
+                className={`px-4 py-2 rounded-lg transition ${
+                  isSubscribed
+                    ? "bg-purple-500 text-white"
+                    : "bg-white/10 text-white hover:bg-white/20"
+                }`}
+              >
+                {isSubscribed ? (
+                  <>
+                    <Bell className="w-5 h-5 inline mr-2" />
+                    Subscribed
+                  </>
+                ) : (
+                  "Subscribe"
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Recent Content */}
-        <div className="mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="glass-effect rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <DollarSign className="w-5 h-5 text-green-400" />
+              <span
+                className={`text-xs ${creator.change > 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                {creator.change > 0 ? "+" : ""}
+                {creator.change}%
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-white">
+              ${creator.sharePrice}
+            </p>
+            <p className="text-sm text-gray-400">Share Price</p>
+          </div>
+
+          <div className="glass-effect rounded-xl p-4">
+            <Users className="w-5 h-5 text-blue-400 mb-2" />
+            <p className="text-2xl font-bold text-white">
+              {creator.subscribers.toLocaleString()}
+            </p>
+            <p className="text-sm text-gray-400">Subscribers</p>
+          </div>
+
+          <div className="glass-effect rounded-xl p-4">
+            <TrendingUp className="w-5 h-5 text-purple-400 mb-2" />
+            <p className="text-2xl font-bold text-white">
+              Lv.{creator.evolutionLevel}
+            </p>
+            <p className="text-sm text-gray-400">Evolution</p>
+          </div>
+
+          <div className="glass-effect rounded-xl p-4">
+            <Clock className="w-5 h-5 text-orange-400 mb-2" />
+            <p className="text-2xl font-bold text-white">{creator.vaults}</p>
+            <p className="text-sm text-gray-400">Time Vaults</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <GlowingButton onClick={handleInvest} className="w-full">
+            <DollarSign className="w-5 h-5 mr-2" />
+            Invest in {creator.name}
+          </GlowingButton>
+          <button
+            onClick={handleJoinAuction}
+            className="px-6 py-3 bg-white/10 rounded-xl text-white hover:bg-white/20 transition flex items-center justify-center space-x-2"
+          >
+            <Gavel className="w-5 h-5" />
+            <span>Join Auction</span>
+          </button>
+        </div>
+
+        <div>
           <h2 className="text-2xl font-semibold text-white mb-6">
-            Recent Content
+            Popular Content
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+            {contents.map((content) => (
               <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="glass-effect rounded-xl overflow-hidden group hover:scale-105 transition-transform cursor-pointer"
+                key={content.id}
+                onClick={() => handleContentClick(content)}
+                className="glass-effect rounded-xl overflow-hidden group cursor-pointer hover:scale-105 transition"
+                whileHover={{ y: -5 }}
               >
-                <div className="h-48 bg-gradient-to-br from-purple-600/20 to-pink-600/20" />
+                <div className="h-48 bg-gradient-to-br from-purple-600/20 to-pink-600/20 relative flex items-center justify-center">
+                  {content.isNew && (
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-green-500 rounded text-xs text-white">
+                      Your Upload
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-purple-500 rounded text-xs text-white">
+                    Lv.{content.evolution}
+                  </div>
+
+                  {content.type?.startsWith("video") && (
+                    <Play className="w-12 h-12 text-white/60" />
+                  )}
+                  {content.type?.startsWith("image") && content.url && (
+                    <img
+                      src={content.url}
+                      alt={content.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  {content.type?.startsWith("audio") && (
+                    <Volume2 className="w-12 h-12 text-white/60" />
+                  )}
+
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <Maximize2 className="w-8 h-8 text-white" />
+                  </div>
+                </div>
                 <div className="p-4">
                   <h3 className="text-lg font-semibold text-white mb-2">
-                    Content Title #{i}
+                    {content.title}
                   </h3>
-                  <p className="text-sm text-gray-400 mb-3">
-                    Posted 2 days ago
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <div className="flex items-center space-x-3">
+                      <span className="flex items-center space-x-1">
+                        <Eye className="w-4 h-4" />
+                        <span>{(content.views / 1000).toFixed(1)}k</span>
+                      </span>
                       <span className="flex items-center space-x-1">
                         <Heart className="w-4 h-4" />
-                        <span>234</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>56</span>
+                        <span>{(content.likes / 1000).toFixed(1)}k</span>
                       </span>
                     </div>
-                    <span className="text-xs text-purple-400">Level 5</span>
+                    <span className="text-purple-400">View →</span>
                   </div>
                 </div>
               </motion.div>
