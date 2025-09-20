@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Providers } from "@/components/providers/Providers";
+import { Providers } from "./providers";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {

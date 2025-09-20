@@ -8,6 +8,11 @@ import { Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import ZkLoginService from "@/lib/sui/zkLogin";
+import { 
+  ConnectButton,
+  useSuiClient,
+  useSignAndExecuteTransaction, } from "@mysten/dapp-kit";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -101,21 +106,7 @@ export default function LoginPage() {
           </h2>
 
           <div className="space-y-4">
-            <button
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center space-x-3 py-4 px-6 bg-white text-gray-900 rounded-xl hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-800 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <FcGoogle className="w-6 h-6" />
-                  <span className="font-medium">Continue with Google</span>
-                </>
-              )}
-            </button>
-
+            <ConnectButton />
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-600"></div>
