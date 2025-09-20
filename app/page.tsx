@@ -139,7 +139,7 @@ const account = useCurrentAccount();
           >
             <GlowingButton
               size="lg"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/create")}
               className="group"
             >
               Start Creating
