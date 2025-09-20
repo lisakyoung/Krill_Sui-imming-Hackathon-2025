@@ -472,18 +472,9 @@ export default function CreatePage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h2 className="text-2xl font-semibold text-white mb-6">Monetization</h2>
               <div className="space-y-6">
-<<<<<<< HEAD
-                {/* Share Pricing */}
-                <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
-                  <label className="block text-sm text-gray-400 mb-3">
-                    Initial Share Price
-                  </label>
-                  <div className="flex items-center space-x-4 mb-2">
-=======
                 <div>
                   <label className="block text-sm text-gray-400 mb-3">Initial Share Price</label>
                   <div className="flex items-center space-x-4">
->>>>>>> fb6b26c4c4dfa92cb354ba0e55c6b5ff08875d6f
                     <input
                       type="range"
                       value={formData.sharePrice}
@@ -494,81 +485,14 @@ export default function CreatePage() {
                       max="1000"
                       className="flex-1"
                     />
-<<<<<<< HEAD
-                    <div className="px-4 py-2 bg-purple-500/20 rounded-lg min-w-[100px] text-center">
-                      <span className="text-2xl font-bold text-white">
-                        ${formData.sharePrice}
-                      </span>
-=======
                     <div className="px-4 py-2 bg-purple-500/20 rounded-lg">
                       <span className="text-2xl font-bold text-white">${formData.sharePrice}</span>
->>>>>>> fb6b26c4c4dfa92cb354ba0e55c6b5ff08875d6f
                     </div>
                   </div>
                   <p className="text-xs text-gray-400">
                     Price will adjust based on demand using bonding curve
                   </p>
                 </div>
-<<<<<<< HEAD
-
-                {/* Subscription Tiers */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-3">
-                    Subscription Model
-                  </label>
-                  <div className="space-y-3">
-                    {[
-                      {
-                        id: "free",
-                        name: "Free",
-                        price: 0,
-                        features: ["Basic access", "Community features"],
-                      },
-                      {
-                        id: "basic",
-                        name: "Basic",
-                        price: 5,
-                        features: [
-                          "All Free features",
-                          "Early access",
-                          "No ads",
-                        ],
-                      },
-                      {
-                        id: "premium",
-                        name: "Premium",
-                        price: 15,
-                        features: [
-                          "All Basic features",
-                          "Exclusive content",
-                          "Direct messaging",
-                        ],
-                      },
-                      {
-                        id: "vip",
-                        name: "VIP",
-                        price: 50,
-                        features: [
-                          "All Premium features",
-                          "1-on-1 sessions",
-                          "Custom requests",
-                          "NFT drops",
-                        ],
-                      },
-                    ].map((tier) => (
-                      <div
-                        key={tier.id}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            subscriptionModel: tier.id,
-                          })
-                        }
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition ${
-                          formData.subscriptionModel === tier.id
-                            ? "bg-purple-500/20 border-purple-500"
-                            : "bg-white/5 border-white/10 hover:border-purple-500/50"
-=======
                 <div>
                   <label className="block text-sm text-gray-400 mb-3">Subscription Model</label>
                   <div className="grid grid-cols-3 gap-3">
@@ -580,7 +504,6 @@ export default function CreatePage() {
                           formData.subscriptionModel === model
                             ? "bg-purple-500 text-white"
                             : "bg-white/5 text-gray-400 hover:bg-white/10"
->>>>>>> fb6b26c4c4dfa92cb354ba0e55c6b5ff08875d6f
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">

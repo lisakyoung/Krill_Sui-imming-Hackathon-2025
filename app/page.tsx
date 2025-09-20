@@ -30,7 +30,7 @@ export default function LandingPage() {
   const router = useRouter();
 const account = useCurrentAccount();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
-
+console.log("Current account:", account);
   const features = [
     {
       icon: <Sparkles className="w-6 h-6" />,
