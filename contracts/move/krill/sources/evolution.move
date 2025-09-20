@@ -40,6 +40,7 @@ module krill::evolution {
         last_evolved: u64,
         evolution_threshold: u64,
         creator_fee_percentage: u64,
+        tier_ids: vector<u64>,
     }
 
     struct ContentBranch has key, store {
@@ -230,4 +231,37 @@ module krill::evolution {
         transfer::transfer(profile, sender);
         profile_id
     }
+
+    pub fun get_content_info( content: &EvolvingContent ) : ( address, vector<u64> ) {
+        (
+            content.creator,
+            content.teir_ids,
+        )
+    }
+    public fun contains_tier(
+        v: &vector<u64>, x: u64
+    ): bool {
+        let len = vector::length(v);
+        let mut i = 0;
+        while (i < len) {
+            if (*vector::borrow(v, i) == x) {
+                return true
+            };
+            i = i + 1;
+        };
+        false
+    }
+
+    entry fun seal_approve(
+        sub: &Subscription,             
+        content: EvolvingContent,   
+    ) {
+        // get_file_info로 파일 정보 조회 (tiers_id는 마지막 요소)
+        let ( creator, tier_ids ) = main::get_content_info(content);
+
+        // 등급 허용 여부: SubNFT의 tier_id가 FileNFT.tiers_id에 포함되어 있어야 함
+        let allowed = contains_tier(&tiers_id, sub.tier_id);
+        assert!(allowed, E_NOT_ALLOWED_TIER);
+    }
+
 }

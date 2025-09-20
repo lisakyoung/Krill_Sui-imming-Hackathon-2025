@@ -102,8 +102,9 @@ async function decryptWithSeal(opts: {
   idHex: string;                 // seal identity (hex)
   encryptedBytes: Uint8Array;    // 암호문
   sessionKey: SessionKey;
+  sealClient: SealClient;
 }) {
-  const { suiClient, packageIdHex, moduleName, idHex, encryptedBytes, sessionKey } = opts;
+  const { suiClient, packageIdHex, moduleName, idHex, encryptedBytes, sessionKey, sealClient } = opts;
 
   // seal_approve 호출 트랜잭션 (onlyTransactionKind)
   const tx = new Transaction();
