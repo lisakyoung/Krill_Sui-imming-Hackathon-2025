@@ -4,38 +4,30 @@ module krill::evolution {
     use sui::transfer;
     use sui::event;
     use sui::table::{Self, Table};
-    use sui::dynamic_object_field as dof;
-    use std::string::{Self, String};
+    use std::string::String;
     use std::vector;
+    use std::option::{Self, Option};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::clock::{Self, Clock};
     use sui::balance::{Self, Balance};
 
-    // ===== Constants =====
+    // Constants
     const MIN_EVOLUTION_THRESHOLD: u64 = 100;
     const MAX_BRANCHES: u64 = 50;
-    const EVOLUTION_COOLDOWN: u64 = 86400000; // 24 hours in ms
-    
-    // ===== Error Codes =====
     const E_NOT_AUTHORIZED: u64 = 1;
     const E_INVALID_EVOLUTION: u64 = 2;
     const E_MAX_BRANCHES_REACHED: u64 = 3;
     const E_INSUFFICIENT_ENGAGEMENT: u64 = 4;
     const E_COOLDOWN_ACTIVE: u64 = 5;
-    const E_CONTENT_LOCKED: u64 = 6;
-    const E_INVALID_BRANCH: u64 = 7;
-    const E_INSUFFICIENT_PAYMENT: u64 = 8;
 
-    // ===== Structs =====
-    
-    /// Main evolving content struct
+    // Structs
     struct EvolvingContent has key, store {
         id: UID,
         creator: address,
         title: String,
         description: String,
-        content_hash: String, // IPFS/Walrus hash
+        content_hash: String,
         evolution_level: u64,
         total_views: u64,
         total_engagement: u64,
@@ -47,10 +39,9 @@ module krill::evolution {
         created_at: u64,
         last_evolved: u64,
         evolution_threshold: u64,
-        creator_fee_percentage: u64, // Basis points (e.g., 500 = 5%)
+        creator_fee_percentage: u64,
     }
 
-    /// Evolution branch
     struct ContentBranch has key, store {
         id: UID,
         parent_content: ID,
@@ -68,17 +59,6 @@ module krill::evolution {
         is_active: bool,
     }
 
-    /// Engagement metrics
-    struct EngagementMetrics has store {
-        likes: u64,
-        shares: u64,
-        comments: u64,
-        remixes: u64,
-        time_spent: u64,
-        unique_viewers: vector<address>,
-    }
-
-    /// Creator profile
     struct CreatorProfile has key, store {
         id: UID,
         owner: address,
@@ -91,8 +71,7 @@ module krill::evolution {
         metadata: Table<String, String>,
     }
 
-    // ===== Events =====
-    
+    // Events
     struct ContentCreated has copy, drop {
         content_id: ID,
         creator: address,
@@ -109,33 +88,7 @@ module krill::evolution {
         timestamp: u64,
     }
 
-    struct BranchCreated has copy, drop {
-        branch_id: ID,
-        parent_content: ID,
-        creator: address,
-        branch_type: String,
-        timestamp: u64,
-    }
-
-    struct RevenueDistributed has copy, drop {
-        content_id: ID,
-        amount: u64,
-        creator_share: u64,
-        platform_share: u64,
-        timestamp: u64,
-    }
-
-    struct EngagementRecorded has copy, drop {
-        content_id: ID,
-        viewer: address,
-        engagement_type: String,
-        score: u64,
-        timestamp: u64,
-    }
-
-    // ===== Public Functions =====
-    
-    /// Create new evolving content
+    // Public functions
     public fun create_content(
         title: String,
         description: String,
@@ -146,7 +99,7 @@ module krill::evolution {
         ctx: &mut TxContext
     ): ID {
         assert!(evolution_threshold >= MIN_EVOLUTION_THRESHOLD, E_INVALID_EVOLUTION);
-        assert!(creator_fee <= 10000, E_INVALID_EVOLUTION); // Max 100%
+        assert!(creator_fee <= 10000, E_INVALID_EVOLUTION);
 
         let content = EvolvingContent {
             id: object::new(ctx),
@@ -169,10 +122,11 @@ module krill::evolution {
         };
 
         let content_id = object::id(&content);
+        let sender = tx_context::sender(ctx);
         
         event::emit(ContentCreated {
             content_id,
-            creator: tx_context::sender(ctx),
+            creator: sender,
             title,
             initial_level: 1,
             timestamp: clock::timestamp_ms(clock),
@@ -182,7 +136,6 @@ module krill::evolution {
         content_id
     }
 
-    /// Create evolution branch
     public fun create_branch(
         parent_content: &mut EvolvingContent,
         branch_type: String,
@@ -192,14 +145,8 @@ module krill::evolution {
         clock: &Clock,
         ctx: &mut TxContext
     ): ID {
-        assert!(!parent_content.is_locked, E_CONTENT_LOCKED);
+        assert!(!parent_content.is_locked, E_COOLDOWN_ACTIVE);
         assert!(vector::length(&parent_content.branches) < MAX_BRANCHES, E_MAX_BRANCHES_REACHED);
-        
-        let current_time = clock::timestamp_ms(clock);
-        assert!(
-            current_time >= parent_content.last_evolved + EVOLUTION_COOLDOWN,
-            E_COOLDOWN_ACTIVE
-        );
 
         let branch = ContentBranch {
             id: object::new(ctx),
@@ -214,34 +161,25 @@ module krill::evolution {
             revenue: balance::zero(),
             participants: vector::empty(),
             metadata: table::new(ctx),
-            created_at: current_time,
+            created_at: clock::timestamp_ms(clock),
             is_active: true,
         };
 
         let branch_id = object::id(&branch);
         vector::push_back(&mut parent_content.branches, branch_id);
         
-        event::emit(BranchCreated {
-            branch_id,
-            parent_content: object::id(parent_content),
-            creator: tx_context::sender(ctx),
-            branch_type,
-            timestamp: current_time,
-        });
-
         transfer::share_object(branch);
         branch_id
     }
 
-    /// Record engagement and potentially trigger evolution
     public fun record_engagement(
         content: &mut EvolvingContent,
         branch: &mut ContentBranch,
-        engagement_type: String,
+        _engagement_type: String,
         score: u64,
         viewer: address,
-        clock: &Clock,
-        ctx: &mut TxContext
+        _clock: &Clock,
+        _ctx: &mut TxContext
     ) {
         branch.engagement_score = branch.engagement_score + score;
         branch.views = branch.views + 1;
@@ -252,87 +190,29 @@ module krill::evolution {
 
         content.total_engagement = content.total_engagement + score;
         content.total_views = content.total_views + 1;
-
-        event::emit(EngagementRecorded {
-            content_id: object::id(content),
-            viewer,
-            engagement_type,
-            score,
-            timestamp: clock::timestamp_ms(clock),
-        });
-
-        // Check for evolution trigger
-        if (branch.engagement_score >= content.evolution_threshold) {
-            trigger_evolution(content, branch, clock, ctx);
-        }
     }
 
-    /// Process payment for accessing content
     public fun process_payment(
         content: &mut EvolvingContent,
         payment: Coin<SUI>,
-        ctx: &mut TxContext
+        _ctx: &mut TxContext
     ) {
-        let amount = coin::value(&payment);
         let payment_balance = coin::into_balance(payment);
-        
-        // Add to content revenue
         balance::join(&mut content.revenue, payment_balance);
-        
-        // Emit revenue event (distribution happens separately)
-        let creator_share = (amount * content.creator_fee_percentage) / 10000;
-        let platform_share = amount - creator_share;
-        
-        event::emit(RevenueDistributed {
-            content_id: object::id(content),
-            amount,
-            creator_share,
-            platform_share,
-            timestamp: 0, // Would use clock in production
-        });
     }
 
-    /// Withdraw creator earnings
     public fun withdraw_earnings(
         content: &mut EvolvingContent,
         amount: u64,
         ctx: &mut TxContext
     ): Coin<SUI> {
         assert!(tx_context::sender(ctx) == content.creator, E_NOT_AUTHORIZED);
-        assert!(balance::value(&content.revenue) >= amount, E_INSUFFICIENT_PAYMENT);
+        assert!(balance::value(&content.revenue) >= amount, E_INSUFFICIENT_ENGAGEMENT);
         
         coin::from_balance(balance::split(&mut content.revenue, amount), ctx)
     }
 
-    /// Update content metadata
-    public fun update_metadata(
-        content: &mut EvolvingContent,
-        key: String,
-        value: String,
-        ctx: &mut TxContext
-    ) {
-        assert!(tx_context::sender(ctx) == content.creator, E_NOT_AUTHORIZED);
-        
-        if (table::contains(&content.metadata, key)) {
-            *table::borrow_mut(&mut content.metadata, key) = value;
-        } else {
-            table::add(&mut content.metadata, key, value);
-        }
-    }
-
-    /// Lock content (prevent further evolution)
-    public fun lock_content(
-        content: &mut EvolvingContent,
-        ctx: &mut TxContext
-    ) {
-        assert!(tx_context::sender(ctx) == content.creator, E_NOT_AUTHORIZED);
-        content.is_locked = true;
-    }
-
-    /// Get or create creator profile
-    public fun get_or_create_profile(
-        ctx: &mut TxContext
-    ): ID {
+    public fun get_or_create_profile(ctx: &mut TxContext): ID {
         let sender = tx_context::sender(ctx);
         let profile = CreatorProfile {
             id: object::new(ctx),
@@ -340,7 +220,7 @@ module krill::evolution {
             total_content: 0,
             total_evolution_level: 0,
             total_revenue: 0,
-            reputation_score: 100, // Starting reputation
+            reputation_score: 100,
             created_contents: vector::empty(),
             participated_branches: vector::empty(),
             metadata: table::new(ctx),
@@ -349,52 +229,5 @@ module krill::evolution {
         let profile_id = object::id(&profile);
         transfer::transfer(profile, sender);
         profile_id
-    }
-
-    // ===== Private Functions =====
-    
-    fun trigger_evolution(
-        content: &mut EvolvingContent,
-        branch: &mut ContentBranch,
-        clock: &Clock,
-        ctx: &mut TxContext
-    ) {
-        content.evolution_level = content.evolution_level + 1;
-        content.last_evolved = clock::timestamp_ms(clock);
-        
-        event::emit(ContentEvolved {
-            content_id: object::id(content),
-            new_level: content.evolution_level,
-            branch_id: object::id(branch),
-            evolver: branch.creator,
-            timestamp: clock::timestamp_ms(clock),
-        });
-    }
-
-    // ===== View Functions =====
-    
-    public fun get_evolution_level(content: &EvolvingContent): u64 {
-        content.evolution_level
-    }
-
-    public fun get_total_engagement(content: &EvolvingContent): u64 {
-        content.total_engagement
-    }
-
-    public fun get_branch_count(content: &EvolvingContent): u64 {
-        vector::length(&content.branches)
-    }
-
-    public fun is_content_locked(content: &EvolvingContent): bool {
-        content.is_locked
-    }
-
-    public fun get_revenue_balance(content: &EvolvingContent): u64 {
-        balance::value(&content.revenue)
-    }
-
-    #[test_only]
-    public fun init_for_testing(ctx: &mut TxContext) {
-        // Test initialization
     }
 }

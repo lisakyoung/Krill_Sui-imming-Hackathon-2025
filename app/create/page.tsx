@@ -300,7 +300,6 @@ export default function CreatePage() {
               </div>
             </motion.div>
           )}
-
           {/* Step 2: Basic Info */}
           {currentStep === 2 && (
             <motion.div
@@ -364,7 +363,6 @@ export default function CreatePage() {
               </div>
             </motion.div>
           )}
-
           {/* Step 3: Content Strategy */}
           {currentStep === 3 && (
             <motion.div
@@ -441,8 +439,8 @@ export default function CreatePage() {
               </div>
             </motion.div>
           )}
-
           {/* Step 4: Monetization */}
+          // Update Step 4 in your existing create/page.tsx
           {currentStep === 4 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -453,11 +451,12 @@ export default function CreatePage() {
               </h2>
 
               <div className="space-y-6">
-                <div>
+                {/* Share Pricing */}
+                <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
                   <label className="block text-sm text-gray-400 mb-3">
                     Initial Share Price
                   </label>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 mb-2">
                     <input
                       type="range"
                       value={formData.sharePrice}
@@ -468,43 +467,172 @@ export default function CreatePage() {
                         })
                       }
                       min="1"
-                      max="100"
+                      max="1000"
                       className="flex-1"
                     />
-                    <div className="px-4 py-2 bg-purple-500/20 rounded-lg">
+                    <div className="px-4 py-2 bg-purple-500/20 rounded-lg min-w-[100px] text-center">
                       <span className="text-2xl font-bold text-white">
                         ${formData.sharePrice}
                       </span>
                     </div>
                   </div>
+                  <p className="text-xs text-gray-400">
+                    Price will adjust based on demand using bonding curve
+                  </p>
                 </div>
 
+                {/* Subscription Tiers */}
                 <div>
                   <label className="block text-sm text-gray-400 mb-3">
                     Subscription Model
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {["free", "freemium", "premium"].map((model) => (
-                      <button
-                        key={model}
+                  <div className="space-y-3">
+                    {[
+                      {
+                        id: "free",
+                        name: "Free",
+                        price: 0,
+                        features: ["Basic access", "Community features"],
+                      },
+                      {
+                        id: "basic",
+                        name: "Basic",
+                        price: 5,
+                        features: [
+                          "All Free features",
+                          "Early access",
+                          "No ads",
+                        ],
+                      },
+                      {
+                        id: "premium",
+                        name: "Premium",
+                        price: 15,
+                        features: [
+                          "All Basic features",
+                          "Exclusive content",
+                          "Direct messaging",
+                        ],
+                      },
+                      {
+                        id: "vip",
+                        name: "VIP",
+                        price: 50,
+                        features: [
+                          "All Premium features",
+                          "1-on-1 sessions",
+                          "Custom requests",
+                          "NFT drops",
+                        ],
+                      },
+                    ].map((tier) => (
+                      <div
+                        key={tier.id}
                         onClick={() =>
-                          setFormData({ ...formData, subscriptionModel: model })
+                          setFormData({
+                            ...formData,
+                            subscriptionModel: tier.id,
+                          })
                         }
-                        className={`px-4 py-3 rounded-xl capitalize transition ${
-                          formData.subscriptionModel === model
-                            ? "bg-purple-500 text-white"
-                            : "bg-white/5 text-gray-400 hover:bg-white/10"
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition ${
+                          formData.subscriptionModel === tier.id
+                            ? "bg-purple-500/20 border-purple-500"
+                            : "bg-white/5 border-white/10 hover:border-purple-500/50"
                         }`}
                       >
-                        {model}
-                      </button>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-medium">
+                            {tier.name}
+                          </span>
+                          <span className="text-purple-400 font-bold">
+                            ${tier.price}/mo
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {tier.features.map((feature, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center space-x-2 text-sm"
+                            >
+                              <Check className="w-3 h-3 text-green-400" />
+                              <span className="text-gray-300">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Revenue Split */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-3">
+                    Revenue Split
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-white">Your earnings</span>
+                      <span className="text-green-400 font-semibold">95%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white">Platform fee</span>
+                      <span className="text-gray-400">5%</span>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden mt-3">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400"
+                      style={{ width: "95%" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Advanced Options */}
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-white/20 bg-white/10 text-purple-500"
+                    />
+                    <div>
+                      <p className="text-white">Enable Tips</p>
+                      <p className="text-xs text-gray-400">
+                        Allow fans to send direct tips
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-white/20 bg-white/10 text-purple-500"
+                      defaultChecked
+                    />
+                    <div>
+                      <p className="text-white">Time Vaults</p>
+                      <p className="text-xs text-gray-400">
+                        Create scheduled content releases
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-white/20 bg-white/10 text-purple-500"
+                      defaultChecked
+                    />
+                    <div>
+                      <p className="text-white">NFT Rewards</p>
+                      <p className="text-xs text-gray-400">
+                        Reward top supporters with NFTs
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
             </motion.div>
           )}
-
           {/* Step 5: Launch */}
           {currentStep === 5 && (
             <motion.div
@@ -567,7 +695,6 @@ export default function CreatePage() {
               </div>
             </motion.div>
           )}
-
           {/* Navigation Buttons */}
           {currentStep < 5 && (
             <div className="flex justify-between mt-8">
