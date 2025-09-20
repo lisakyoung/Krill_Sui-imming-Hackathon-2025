@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles, TrendingUp, Clock, Gavel } from "lucide-react";
@@ -7,6 +8,12 @@ import { GlowingButton } from "@/components/ui/GlowingButton";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+import { 
+  ConnectButton,
+  useSuiClient,
+  useSignAndExecuteTransaction, } from "@mysten/dapp-kit";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+
 
 // Dynamic import for Three.js components to avoid SSR issues
 const ThreeBackground = dynamic(
@@ -21,6 +28,8 @@ const ThreeBackground = dynamic(
 
 export default function LandingPage() {
   const router = useRouter();
+const account = useCurrentAccount();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
   const features = [
     {
@@ -94,6 +103,7 @@ export default function LandingPage() {
             <GlowingButton onClick={() => router.push("/login")}>
               Launch App
             </GlowingButton>
+            <ConnectButton />
           </motion.div>
         </nav>
 
