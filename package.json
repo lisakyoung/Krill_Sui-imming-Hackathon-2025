@@ -16,7 +16,11 @@
     "@mysten/enoki": "^0.3.17",
     "@mysten/seal": "^0.6.0",
     "@mysten/sui.js": "^0.54.1",
+<<<<<<< HEAD
     "@mysten/wallet-standard": "^0.17.0",
+=======
+    "@mysten/walrus": "^0.7.0",
+>>>>>>> fb6b26c4c4dfa92cb354ba0e55c6b5ff08875d6f
     "@mysten/zklogin": "^0.8.1",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",

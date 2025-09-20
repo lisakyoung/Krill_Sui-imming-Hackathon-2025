@@ -11,6 +11,7 @@ import { ThemeProvider } from "next-themes";
 import { useState } from "react";
 import "@mysten/dapp-kit/dist/index.css";
 
+
 const { networkConfig } = createNetworkConfig({
   testnet: { url: getFullnodeUrl("testnet") },
   mainnet: { url: getFullnodeUrl("mainnet") },
