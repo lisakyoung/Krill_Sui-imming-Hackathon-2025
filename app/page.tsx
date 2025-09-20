@@ -29,6 +29,7 @@ const ThreeBackground = dynamic(
 export default function LandingPage() {
   const router = useRouter();
 const account = useCurrentAccount();
+console.log(account)
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
   const features = [
