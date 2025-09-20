@@ -1,6 +1,6 @@
 import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
 import { SealClient, SessionKey } from "@mysten/seal";
-import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
+import type { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { fromHex, toBase64 } from "@mysten/sui/utils"
 import { useCallback, useState } from "react";
@@ -11,17 +11,17 @@ const serverObjectIds = [
     "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8"
 ];
 
-export const suiClient = new SuiClient({ url: getFullnodeUrl('testnet') });
-
-export const sealClient = new SealClient({
-    suiClient,
-    serverConfigs: serverObjectIds.map((Id) => ({
-        objectId: Id,
-        weight: 1, // key server에 가중치 설정 가능
-    })),
-    verifyKeyServers: false, 
-    // 제공된 url이 키 서버에 올바르게 대응되는지 확인해야 하는 경우 true 사용
-})
+/**
+ * SuiClient를 인자로 받아 SealClient 인스턴스를 생성합니다.
+ * @param suiClient - dapp-kit의 useSuiClient() 훅으로 얻은 SuiClient 인스턴스
+ */
+export function createSealClient(suiClient: SuiClient) {
+  return new SealClient({
+      suiClient,
+      serverConfigs: serverObjectIds.map((id) => ({ objectId: id, weight: 1 })),
+      verifyKeyServers: false,
+  });
+}
 
 // 입력 받은 사진 파일을 Uint8Array 형식으로 전환
 export const imageToBytes = async (file: File) => { 
@@ -35,6 +35,7 @@ export const imageToBytes = async (file: File) => {
 // 변환한 사진 데이터를 data로 입력
 // 암호화
 export const encryptWithSeal = async ( // 콘텐츠를 암호화
+  sealClient: SealClient,
   packageId: string,
   id: string,
   data: Uint8Array
@@ -51,7 +52,7 @@ export const encryptWithSeal = async ( // 콘텐츠를 암호화
 
 // 세션키 연장하는 함수
 /** 1) 커스텀 훅: 세션키 초기화 */
-function useSessionKey(packageIdHex: string) {
+function useSessionKey(suiClient: SuiClient, packageIdHex: string) {
   const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
   const currentAccount = useCurrentAccount();
   const [sessionKey, setSessionKey] = useState<SessionKey | null>(null);
@@ -88,20 +89,21 @@ function useSessionKey(packageIdHex: string) {
     } finally {
       setLoading(false);
     }
-  }, [currentAccount, packageIdHex, signPersonalMessage]);
+  }, [currentAccount, packageIdHex, signPersonalMessage, suiClient]);
 
   return { sessionKey, init, loading, error };
 }
 
 /** 2) 헬퍼: seal_approve 호출 트랜잭션 만들고 복호화 */
 async function decryptWithSeal(opts: {
+  suiClient: SuiClient;
   packageIdHex: string;
   moduleName: string;
   idHex: string;                 // seal identity (hex)
   encryptedBytes: Uint8Array;    // 암호문
   sessionKey: SessionKey;
 }) {
-  const { packageIdHex, moduleName, idHex, encryptedBytes, sessionKey } = opts;
+  const { suiClient, packageIdHex, moduleName, idHex, encryptedBytes, sessionKey } = opts;
 
   // seal_approve 호출 트랜잭션 (onlyTransactionKind)
   const tx = new Transaction();

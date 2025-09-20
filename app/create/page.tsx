@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, ChangeEvent, DragEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layouts/MainLayout";
 import { motion } from "framer-motion";
@@ -21,121 +21,224 @@ import {
 } from "lucide-react";
 import { GlowingButton } from "@/components/ui/GlowingButton";
 import toast from "react-hot-toast";
+import {
+  useCurrentAccount,
+  useSuiClient,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
+import { createWalrusClient, uploadFileToWalrus } from "@/lib/walrusUtils";
+import { createSealClient, encryptWithSeal } from "@/lib/seal";
+
+// 타입 정의
+interface FormData {
+  file: {
+    name: string;
+    size: number;
+    type: string;
+    previewUrl: string;
+    content: Uint8Array;
+  } | null;
+  title: string;
+  description: string;
+  categories: string[];
+  enableEvolution: boolean;
+  sharePrice: number;
+  subscriptionModel: "free" | "freemium" | "premium";
+}
+
+// 초기값
+const initialFormData: FormData = {
+  file: null,
+  title: "",
+  description: "",
+  categories: [],
+  enableEvolution: false,
+  sharePrice: 10,
+  subscriptionModel: "free",
+};
+
+// Step UI 정의
+const steps = [
+  { id: 1, name: "Content Upload", icon: Upload },
+  { id: 2, name: "Basic Info", icon: Users },
+  { id: 3, name: "Content Strategy", icon: Sparkles },
+  { id: 4, name: "Monetization", icon: DollarSign },
+  { id: 5, name: "Launch", icon: TrendingUp },
+];
+
+const categories = [
+  "Art",
+  "Music",
+  "Gaming",
+  "Education",
+  "Tech",
+  "Lifestyle",
+  "Entertainment",
+  "Other",
+];
 
 export default function CreatePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
-  const [formData, setFormData] = useState({
-    contentTitle: "",
-    bio: "",
-    categories: [] as string[],
-    sharePrice: 10,
-    enableEvolution: true,
-    subscriptionModel: "free",
-    uploadedContent: null as any,
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const steps = [
-    { id: 1, name: "Content Upload", icon: Upload },
-    { id: 2, name: "Basic Info", icon: Users },
-    { id: 3, name: "Content Strategy", icon: Sparkles },
-    { id: 4, name: "Monetization", icon: DollarSign },
-    { id: 5, name: "Launch", icon: TrendingUp },
-  ];
+  const account = useCurrentAccount();
+  const suiClient = useSuiClient();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
-  const categories = [
-    "Art",
-    "Music",
-    "Gaming",
-    "Education",
-    "Tech",
-    "Lifestyle",
-    "Entertainment",
-    "Other",
-  ];
+  // useSuiClient 훅으로 가져온 suiClient를 사용하여 각 클라이언트를 생성합니다.
+  // useMemo를 사용하여 suiClient가 변경될 때만 재생성되도록 최적화합니다.
+  const sealClient = useMemo(() => createSealClient(suiClient), [suiClient]);
+  const walrusClient = useMemo(() => createWalrusClient(suiClient), [suiClient]);
 
-  const handleFileUpload = (file: File) => {
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const url = e.target?.result as string;
-        setFormData({
-          ...formData,
-          uploadedContent: {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: url,
-            walrusCID: `bafybei${Math.random().toString(36).substring(2, 15)}`,
-          },
-        });
-        toast.success("Content uploaded successfully!");
-      };
-      reader.readAsDataURL(file);
-    }
+  // 파일 업로드 처리
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const arrayBuffer = e.target?.result as ArrayBuffer;
+      const content = new Uint8Array(arrayBuffer);
+      const previewUrl = URL.createObjectURL(file);
+      setFormData((prev) => ({
+        ...prev,
+        file: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          previewUrl,
+          content,
+        },
+      }));
+      toast.success("Content uploaded successfully!");
+    };
+    reader.readAsArrayBuffer(file);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileUpload(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) handleFileChange(files[0]);
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDragLeave = () => setIsDragging(false);
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFileUpload(file);
+    if (file) handleFileChange(file);
   };
 
+  // 카테고리 토글
   const handleCategoryToggle = (category: string) => {
-    setFormData({
-      ...formData,
-      categories: formData.categories.includes(category)
-        ? formData.categories.filter((c) => c !== category)
-        : [...formData.categories, category],
+    setFormData((prev) => {
+      const newCategories = prev.categories.includes(category)
+        ? prev.categories.filter((c) => c !== category)
+        : [...prev.categories, category];
+      return { ...prev, categories: newCategories };
     });
   };
 
+  // Step 이동
   const handleNextStep = () => {
-    if (currentStep === 1 && !formData.uploadedContent) {
+    if (currentStep === 1 && !formData.file) {
       toast.error("Please upload content first");
       return;
     }
-    if (currentStep === 2 && !formData.contentTitle) {
+    if (currentStep === 2 && !formData.title) {
       toast.error("Please add a title");
       return;
     }
-    if (currentStep < 5) {
-      setCurrentStep(currentStep + 1);
-    }
+    if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
+  const handlePrevStep = () => setCurrentStep((prev) => Math.max(1, prev - 1));
 
-  const handleLaunch = () => {
-    localStorage.setItem("creatorProfile", JSON.stringify(formData));
-
-    // Track activity
-    const trackActivity = (window as any).trackActivity;
-    if (trackActivity) {
-      trackActivity("content", "Published new content");
+  // Launch 실행
+  const handleLaunch = async () => {
+    if (!account) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+    if (!formData.file?.content) {
+      toast.error("Please upload a content file first.");
+      return;
     }
 
-    toast.success("Content published successfully!");
+    setIsUploading(true);
+    const toastId = toast.loading(
+      "Encrypting and launching your content... Please approve transactions."
+    );
 
-    if (formData.enableEvolution) {
-      router.push("/creator-studio-evolution");
-    } else {
-      router.push("/creator-studio-standard");
+    try {
+      console.log(`[1/5] Launch process started for file: ${formData.file.name}`);
+      console.log(`[1/5] Original file size: ${formData.file.content.byteLength} bytes`);
+
+      // 1. Seal을 사용하여 콘텐츠 암호화
+      // 환경 변수에서 패키지 ID를 가져옵니다.
+      const packageId = process.env.NEXT_PUBLIC_SEAL_PACKAGE_ID;
+      if (!packageId) {
+        throw new Error(
+          "NEXT_PUBLIC_SEAL_PACKAGE_ID is not defined in .env.local"
+        );
+      }
+
+     
+      const timestamp = Date.now().toString(16).padStart(16, '0');
+      const sealId = "0x" + timestamp + "000000000000000000000000000000000000000000000000";
+
+      console.log(`[2/5] Encrypting content with Seal... (sealId: ${sealId})`);
+      
+
+      const { encryptedObject } = await encryptWithSeal(
+        sealClient,
+        packageId,
+        sealId,
+        formData.file.content
+      );
+      console.log(`[3/5] Encryption complete. Encrypted size: ${encryptedObject.byteLength} bytes`);
+
+      console.log("[4/5] Uploading encrypted data to Walrus...");
+      const { files } = await uploadFileToWalrus(
+        walrusClient,
+        encryptedObject, // 2. 암호화된 데이터를 Walrus에 업로드
+        account.address,
+        signAndExecute
+      );
+
+      const blobId = files[0]?.blobId;
+      if (!blobId) {
+        throw new Error("Failed to get Blob ID from Walrus.");
+      }
+      console.log(`[5/5] Upload to Walrus successful. Blob ID: ${blobId}`);
+
+      const finalContentData = {
+        ...formData,
+        file: { ...formData.file, content: "" }, // 큰 바이너리는 저장하지 않음
+        blobId,
+        ownerAddress: account.address,
+      };
+      localStorage.setItem("creatorProfile", JSON.stringify(finalContentData));
+
+      toast.success("Content launched successfully!", { id: toastId });
+
+      router.push(
+        formData.enableEvolution
+          ? "/creator-studio-evolution"
+          : "/creator-studio-standard"
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred.";
+      console.error("Launch failed:", error);
+      toast.error(`Failed to launch content: ${errorMessage}`, {
+        id: toastId,
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -150,25 +253,27 @@ export default function CreatePage() {
             <div key={step.id} className="flex items-center">
               <div
                 className={`
-                flex items-center justify-center w-12 h-12 rounded-full
-                ${currentStep >= step.id ? "bg-purple-500" : "bg-white/10"}
-                transition-all duration-300
-              `}
+                  flex items-center justify-center w-12 h-12 rounded-full
+                  ${currentStep >= step.id ? "bg-purple-500" : "bg-white/10"}
+                  transition-all duration-300
+                `}
               >
                 {currentStep > step.id ? (
                   <Check className="w-6 h-6 text-white" />
                 ) : (
                   <step.icon
-                    className={`w-6 h-6 ${currentStep >= step.id ? "text-white" : "text-gray-400"}`}
+                    className={`w-6 h-6 ${
+                      currentStep >= step.id ? "text-white" : "text-gray-400"
+                    }`}
                   />
                 )}
               </div>
               {index < steps.length - 1 && (
                 <div
                   className={`
-                  w-full h-0.5 mx-2
-                  ${currentStep > step.id ? "bg-purple-500" : "bg-white/10"}
-                `}
+                    w-full h-0.5 mx-2
+                    ${currentStep > step.id ? "bg-purple-500" : "bg-white/10"}
+                  `}
                 />
               )}
             </div>
@@ -179,14 +284,8 @@ export default function CreatePage() {
         <div className="glass-effect rounded-2xl p-8">
           {/* Step 1: Content Upload */}
           {currentStep === 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Upload Your Content
-              </h2>
-
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-2xl font-semibold text-white mb-6">Upload Your Content</h2>
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -205,92 +304,57 @@ export default function CreatePage() {
                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
                 />
 
-                {!formData.uploadedContent ? (
+                {!formData.file ? (
                   <>
                     <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-white text-lg mb-2">
-                      Drop files here or click to upload
-                    </p>
+                    <p className="text-white text-lg mb-2">Drop files here or click to upload</p>
                     <p className="text-gray-400 text-sm mb-6">
                       Support for images, videos, audio files, and documents
                     </p>
-
-                    {/* File Type Buttons */}
                     <div className="flex justify-center space-x-4">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition"
-                      >
-                        <Image className="w-6 h-6 text-purple-400" />
-                      </button>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition"
-                      >
-                        <Video className="w-6 h-6 text-purple-400" />
-                      </button>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition"
-                      >
-                        <Music className="w-6 h-6 text-purple-400" />
-                      </button>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition"
-                      >
-                        <FileText className="w-6 h-6 text-purple-400" />
-                      </button>
+                      {[Image, Video, Music, FileText].map((Icon, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition"
+                        >
+                          <Icon className="w-6 h-6 text-purple-400" />
+                        </button>
+                      ))}
                     </div>
                   </>
                 ) : (
                   <div className="max-w-md mx-auto">
-                    {/* Preview uploaded content */}
-                    {formData.uploadedContent.type.startsWith("image") && (
+                    {/* 미리보기 */}
+                    {formData.file.type.startsWith("image") && (
                       <img
-                        src={formData.uploadedContent.url}
+                        src={formData.file.previewUrl}
                         alt="Preview"
                         className="w-full h-48 object-cover rounded-lg mb-4"
                       />
                     )}
-                    {formData.uploadedContent.type.startsWith("video") && (
+                    {formData.file.type.startsWith("video") && (
                       <video
-                        src={formData.uploadedContent.url}
+                        src={formData.file.previewUrl}
                         controls
                         className="w-full h-48 rounded-lg mb-4"
                       />
                     )}
-                    {formData.uploadedContent.type.startsWith("audio") && (
+                    {formData.file.type.startsWith("audio") && (
                       <div className="bg-white/5 rounded-lg p-6 mb-4">
                         <Music className="w-12 h-12 text-purple-400 mx-auto mb-3" />
-                        <audio
-                          src={formData.uploadedContent.url}
-                          controls
-                          className="w-full"
-                        />
+                        <audio src={formData.file.previewUrl} controls className="w-full" />
                       </div>
                     )}
 
                     <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                      <p className="text-white mb-1">
-                        {formData.uploadedContent.name}
-                      </p>
+                      <p className="text-white mb-1">{formData.file.name}</p>
                       <p className="text-sm text-gray-400">
-                        Size:{" "}
-                        {(formData.uploadedContent.size / 1024 / 1024).toFixed(
-                          2
-                        )}{" "}
-                        MB
-                      </p>
-                      <p className="text-sm text-purple-400 mt-2">
-                        Walrus CID: {formData.uploadedContent.walrusCID}
+                        Size: {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
-
                     <button
-                      onClick={() =>
-                        setFormData({ ...formData, uploadedContent: null })
-                      }
+                      onClick={() => setFormData({ ...formData, file: null })}
                       className="mt-4 text-sm text-gray-400 hover:text-white transition"
                     >
                       Upload different file
@@ -303,48 +367,30 @@ export default function CreatePage() {
 
           {/* Step 2: Basic Info */}
           {currentStep === 2 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Basic Information
-              </h2>
-
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-2xl font-semibold text-white mb-6">Basic Information</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    Content Title
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-2">Content Title</label>
                   <input
                     type="text"
-                    value={formData.contentTitle}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contentTitle: e.target.value })
-                    }
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
                     placeholder="Give your content a catchy title..."
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    Bio / Description
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-2">Bio / Description</label>
                   <textarea
-                    value={formData.bio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bio: e.target.value })
-                    }
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 h-32 resize-none"
                     placeholder="Tell your story..."
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm text-gray-400 mb-3">
-                    Categories
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-3">Categories</label>
                   <div className="flex flex-wrap gap-3">
                     {categories.map((category) => (
                       <button
@@ -367,14 +413,8 @@ export default function CreatePage() {
 
           {/* Step 3: Content Strategy */}
           {currentStep === 3 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Content Strategy
-              </h2>
-
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-2xl font-semibold text-white mb-6">Content Strategy</h2>
               <div className="space-y-6">
                 <div
                   className={`p-6 border rounded-xl transition ${
@@ -388,52 +428,39 @@ export default function CreatePage() {
                       type="checkbox"
                       checked={formData.enableEvolution}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          enableEvolution: e.target.checked,
-                        })
+                        setFormData({ ...formData, enableEvolution: e.target.checked })
                       }
                       className="mt-1 w-5 h-5 rounded border-white/20 bg-white/10 text-purple-500 focus:ring-purple-500"
                     />
                     <div>
-                      <p className="text-white font-medium mb-1">
-                        Enable Evolution for this content
-                      </p>
+                      <p className="text-white font-medium mb-1">Enable Evolution for this content</p>
                       <p className="text-sm text-gray-400">
-                        Allow your content to branch and evolve based on
-                        community interaction
+                        Allow your content to branch and evolve based on community interaction
                       </p>
                     </div>
                   </label>
                 </div>
-
                 {formData.enableEvolution && (
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
                       <GitBranch className="w-5 h-5 text-purple-400 mt-0.5" />
                       <div>
                         <p className="text-white">Community Remixes</p>
-                        <p className="text-sm text-gray-400">
-                          Let fans create their own versions
-                        </p>
+                        <p className="text-sm text-gray-400">Let fans create their own versions</p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <Users className="w-5 h-5 text-blue-400 mt-0.5" />
                       <div>
                         <p className="text-white">Build your subscriber base</p>
-                        <p className="text-sm text-gray-400">
-                          Engage directly with your audience
-                        </p>
+                        <p className="text-sm text-gray-400">Engage directly with your audience</p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <Lock className="w-5 h-5 text-green-400 mt-0.5" />
                       <div>
                         <p className="text-white">Encrypted with Seal</p>
-                        <p className="text-sm text-gray-400">
-                          Your content is secure and protected
-                        </p>
+                        <p className="text-sm text-gray-400">Your content is secure and protected</p>
                       </div>
                     </div>
                   </div>
@@ -444,52 +471,34 @@ export default function CreatePage() {
 
           {/* Step 4: Monetization */}
           {currentStep === 4 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Monetization
-              </h2>
-
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-2xl font-semibold text-white mb-6">Monetization</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-3">
-                    Initial Share Price
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-3">Initial Share Price</label>
                   <div className="flex items-center space-x-4">
                     <input
                       type="range"
                       value={formData.sharePrice}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          sharePrice: parseInt(e.target.value),
-                        })
+                        setFormData({ ...formData, sharePrice: parseInt(e.target.value) })
                       }
                       min="1"
                       max="100"
                       className="flex-1"
                     />
                     <div className="px-4 py-2 bg-purple-500/20 rounded-lg">
-                      <span className="text-2xl font-bold text-white">
-                        ${formData.sharePrice}
-                      </span>
+                      <span className="text-2xl font-bold text-white">${formData.sharePrice}</span>
                     </div>
                   </div>
                 </div>
-
                 <div>
-                  <label className="block text-sm text-gray-400 mb-3">
-                    Subscription Model
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-3">Subscription Model</label>
                   <div className="grid grid-cols-3 gap-3">
                     {["free", "freemium", "premium"].map((model) => (
                       <button
                         key={model}
-                        onClick={() =>
-                          setFormData({ ...formData, subscriptionModel: model })
-                        }
+                        onClick={() => setFormData({ ...formData, subscriptionModel: model as any })}
                         className={`px-4 py-3 rounded-xl capitalize transition ${
                           formData.subscriptionModel === model
                             ? "bg-purple-500 text-white"
@@ -515,14 +524,8 @@ export default function CreatePage() {
               <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <TrendingUp className="w-10 h-10 text-white" />
               </div>
-
-              <h2 className="text-2xl font-semibold text-white mb-4">
-                Ready to Launch!
-              </h2>
-              <p className="text-gray-400 mb-8">
-                Your content is ready to be shared with the world
-              </p>
-
+              <h2 className="text-2xl font-semibold text-white mb-4">Ready to Launch!</h2>
+              <p className="text-gray-400 mb-8">Your content is ready to be shared with the world</p>
               <div className="space-y-4 max-w-md mx-auto">
                 <div className="flex items-center space-x-3 text-left">
                   <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
@@ -530,16 +533,12 @@ export default function CreatePage() {
                 </div>
                 <div className="flex items-center space-x-3 text-left">
                   <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
-                  <span className="text-white">
-                    Profile information complete
-                  </span>
+                  <span className="text-white">Profile information complete</span>
                 </div>
                 <div className="flex items-center space-x-3 text-left">
                   <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
                   <span className="text-white">
-                    {formData.enableEvolution
-                      ? "Evolution enabled"
-                      : "Standard content"}
+                    {formData.enableEvolution ? "Evolution enabled" : "Standard content"}
                   </span>
                 </div>
                 <div className="flex items-center space-x-3 text-left">
@@ -547,14 +546,10 @@ export default function CreatePage() {
                   <span className="text-white">Monetization configured</span>
                 </div>
               </div>
-
               <div className="flex space-x-4 mt-8">
                 <button
                   onClick={() => {
-                    localStorage.setItem(
-                      "creatorProfile",
-                      JSON.stringify(formData)
-                    );
+                    localStorage.setItem("creatorProfile", JSON.stringify(formData));
                     router.push("/creator/1");
                   }}
                   className="flex-1 py-3 bg-white/10 rounded-xl text-white hover:bg-white/20 transition"
@@ -562,7 +557,7 @@ export default function CreatePage() {
                   Preview Profile
                 </button>
                 <GlowingButton onClick={handleLaunch} className="flex-1">
-                  Launch Content 🚀
+                  {isUploading ? "Uploading..." : "Launch Content 🚀"}
                 </GlowingButton>
               </div>
             </motion.div>
@@ -572,7 +567,7 @@ export default function CreatePage() {
           {currentStep < 5 && (
             <div className="flex justify-between mt-8">
               <button
-                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                onClick={handlePrevStep}
                 className="px-6 py-3 bg-white/10 rounded-xl text-white hover:bg-white/20 transition"
                 disabled={currentStep === 1}
               >
