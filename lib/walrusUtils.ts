@@ -1,24 +1,24 @@
-import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+import type { SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
 import { WalrusFile } from '@mysten/walrus';
 import type { Keypair } from '@mysten/sui/cryptography';
 
-
-export const suiClient = new SuiClient({
-	url: getFullnodeUrl('testnet'),
-});
-
-const walrusClient = new WalrusClient({
-	network: 'testnet',
-	suiClient,
-});
-
+/**
+ * SuiClient를 인자로 받아 WalrusClient 인스턴스를 생성합니다.
+ * @param suiClient - dapp-kit의 useSuiClient() 훅으로 얻은 SuiClient 인스턴스
+ */
+export function createWalrusClient(suiClient: SuiClient) {
+	return new WalrusClient({
+		network: 'testnet',
+		suiClient,
+	});
+}
 
 // reading blobs
 export const blob = async ( // 구독자가 맞으면 복호화
+  walrusClient: WalrusClient,
   blobId:string,
-) => {await walrusClient.readBlob({ blobId });
-}
+) => {await walrusClient.readBlob({ blobId });}
 
 /**
  * @deprecated This function requires a raw Keypair and is not suitable for dApp environments. Use createWalrusFileTransaction instead.
@@ -29,11 +29,13 @@ export const file = async (file: Uint8Array, keypair: Keypair) => {};
  * Connects to a wallet to upload a file to Walrus.
  * This handles the entire multi-step process: encoding, registering, uploading, and certifying.
  * @param fileContent The file content as a Uint8Array.
+ * @param walrusClient The WalrusClient instance.
  * @param ownerAddress The address of the wallet that will own the blob.
  * @param signAndExecute A function from a wallet hook (e.g., `useSignAndExecuteTransaction`) to sign and execute transactions.
  * @returns The result of the final certification transaction.
  */
 export const uploadFileToWalrus = async (
+	walrusClient: WalrusClient,
 	fileContent: Uint8Array,
 	ownerAddress: string,
 	signAndExecute: (payload: { transaction: any }) => Promise<any>,
@@ -72,20 +74,19 @@ export const uploadFileToWalrus = async (
 	// 6. Get the new file info
 	const files = await flow.listFiles();
 	console.log('Uploaded files info:', files);
-  console.log('blobId', files[0].blobId);
-  console.log('blobId', files[1].blobId);
-  console.log('blobId', files[2].blobId);
-
-	return { certifyResult, files };
+  	console.log('blobId', files[0].blobId);
+	return { files };
 };
 
 /**
  * Reads a file from Walrus using its ID (Blob ID or Quilt ID).
  * @param fileId The ID of the file to read.
+ * @param walrusClient The WalrusClient instance.
  * @returns The file content as a Uint8Array.
  */
 export const readFileFromWalrus = async (
-	fileId: string,
+	walrusClient: WalrusClient,
+	fileId: string
 ): Promise<Uint8Array> => {
 	console.log(`Reading file with ID: ${fileId}`);
 	const [file] = await walrusClient.getFiles({ ids: [fileId] });
