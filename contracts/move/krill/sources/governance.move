@@ -5,25 +5,21 @@ module krill::governance {
     use sui::event;
     use sui::table::{Self, Table};
     use sui::clock::{Self, Clock};
-    use std::string::{Self, String};
+    use std::string::String;
     use std::vector;
+    use std::option::{Self, Option};
 
-    // ===== Constants =====
-    const PROPOSAL_DURATION: u64 = 604800000; // 7 days in ms
-    const MIN_QUORUM: u64 = 100; // Minimum votes needed
-    const EXECUTION_DELAY: u64 = 172800000; // 2 days in ms
-    
-    // ===== Error Codes =====
+    // Constants
+    const PROPOSAL_DURATION: u64 = 604800000;
+    const MIN_QUORUM: u64 = 100;
+    const EXECUTION_DELAY: u64 = 172800000;
     const E_NOT_AUTHORIZED: u64 = 1;
     const E_PROPOSAL_EXPIRED: u64 = 2;
     const E_ALREADY_VOTED: u64 = 3;
     const E_PROPOSAL_NOT_PASSED: u64 = 4;
     const E_EXECUTION_TOO_EARLY: u64 = 5;
-    const E_INVALID_PROPOSAL: u64 = 6;
 
-    // ===== Structs =====
-    
-    /// Governance proposal
+    // Structs
     struct Proposal has key, store {
         id: UID,
         proposer: address,
@@ -36,11 +32,10 @@ module krill::governance {
         votes_for: u64,
         votes_against: u64,
         voters: Table<address, bool>,
-        status: String, // "active", "passed", "failed", "executed"
+        status: String,
         metadata: Table<String, String>,
     }
 
-    /// DAO treasury
     struct Treasury has key, store {
         id: UID,
         total_funds: u64,
@@ -49,8 +44,7 @@ module krill::governance {
         authorized_spenders: vector<address>,
     }
 
-    // ===== Events =====
-    
+    // Events
     struct ProposalCreated has copy, drop {
         proposal_id: ID,
         proposer: address,
@@ -71,9 +65,7 @@ module krill::governance {
         timestamp: u64,
     }
 
-    // ===== Public Functions =====
-    
-    /// Create governance proposal
+    // Public functions
     public fun create_proposal(
         title: String,
         description: String,
@@ -95,7 +87,7 @@ module krill::governance {
             votes_for: 0,
             votes_against: 0,
             voters: table::new(ctx),
-            status: string::utf8(b"active"),
+            status: std::string::utf8(b"active"),
             metadata: table::new(ctx),
         };
 
@@ -112,7 +104,6 @@ module krill::governance {
         proposal_id
     }
 
-    /// Cast vote on proposal
     public fun cast_vote(
         proposal: &mut Proposal,
         support: bool,
@@ -142,7 +133,6 @@ module krill::governance {
         });
     }
 
-    /// Execute passed proposal
     public fun execute_proposal(
         proposal: &mut Proposal,
         clock: &Clock,
@@ -156,10 +146,10 @@ module krill::governance {
         
         if (option::is_none(&proposal.execution_time)) {
             proposal.execution_time = option::some(current_time + EXECUTION_DELAY);
-            proposal.status = string::utf8(b"passed");
+            proposal.status = std::string::utf8(b"passed");
         } else {
             assert!(current_time >= *option::borrow(&proposal.execution_time), E_EXECUTION_TOO_EARLY);
-            proposal.status = string::utf8(b"executed");
+            proposal.status = std::string::utf8(b"executed");
             
             event::emit(ProposalExecuted {
                 proposal_id: object::id(proposal),
@@ -169,8 +159,6 @@ module krill::governance {
         }
     }
 
-    // ===== View Functions =====
-    
     public fun get_proposal_status(proposal: &Proposal): String {
         proposal.status
     }

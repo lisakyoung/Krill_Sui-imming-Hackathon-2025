@@ -47,11 +47,7 @@ export default function UploadContentPage() {
   };
 
   const processFile = (file: File) => {
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("File size must be less than 100MB");
-      return;
-    }
-
+    // Remove file size check - Walrus handles large files
     const reader = new FileReader();
     reader.onload = (e) => {
       setUploadedFile({
