@@ -23,11 +23,13 @@ import {
 import { useRouter } from "next/navigation";
 import { GlowingButton } from "@/components/ui/GlowingButton";
 import toast from "react-hot-toast";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 export default function ProfilePage() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<string | null>(null);
+   const account = useCurrentAccount();
 
   const handleLogout = () => {
     logout();
@@ -133,7 +135,7 @@ export default function ProfilePage() {
               <div className="flex items-center space-x-2 mt-2">
                 <Wallet className="w-4 h-4 text-purple-400" />
                 <span className="text-sm text-purple-400">
-                  {user?.userAddress || "0x1234...5678"}
+                  {account?.address || "0x1234...5678"}
                 </span>
               </div>
             </div>

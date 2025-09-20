@@ -23,6 +23,8 @@ import { useTheme } from "next-themes";
 import { GlowingButton } from "@/components/ui/GlowingButton";
 import { formatAddress } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { ConnectButton } from "@mysten/dapp-kit";
 
 const menuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
@@ -47,6 +49,7 @@ export default function MainLayout({
   const [notifications, setNotifications] = useState(3);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const account = useCurrentAccount();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -172,9 +175,8 @@ export default function MainLayout({
             {/* User Menu */}
             <div className="flex items-center space-x-2">
               <div className="hidden sm:block text-right">
-                <p className="text-xs text-gray-400">Wallet</p>
                 <p className="text-sm text-white font-medium">
-                  {user ? formatAddress(user.userAddress) : "Not Connected"}
+                  <ConnectButton />
                 </p>
               </div>
 
