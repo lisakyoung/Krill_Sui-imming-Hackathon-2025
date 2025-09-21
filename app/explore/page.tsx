@@ -211,10 +211,10 @@ export default function ExplorePage() {
                   View Profile
                 </button>
                 <button
-                  onClick={() => handleJoinAuction(creator.id)}
+                  onClick={() => router.push(`/creator/${creator.id}/subscribe`)}
                   className="flex-1 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition"
                 >
-                  Join Auction
+                  Subscribe
                 </button>
               </div>
             </motion.div>

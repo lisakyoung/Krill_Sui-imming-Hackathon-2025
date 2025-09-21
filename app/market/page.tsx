@@ -278,16 +278,27 @@ export default function MarketPage() {
                             </p>
                           </td>
                           <td className="p-4 text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCreator(creator);
-                                setOrderType("buy");
-                              }}
-                              className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition"
-                            >
-                              Trade
-                            </button>
+                            <div className="flex space-x-2 justify-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCreator(creator);
+                                  setOrderType("buy");
+                                }}
+                                className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition"
+                              >
+                                Trade
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/creator/${creator.id}/subscribe`;
+                                }}
+                                className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition"
+                              >
+                                Subscribe
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
