@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { GlowingButton } from "@/components/ui/GlowingButton";
 import toast from "react-hot-toast";
+import smile from "../assets/short_smile_dot_basic.png"
+import Image from "next/image";
 
 export default function CreatorStudioEvolution() {
   const router = useRouter();
@@ -107,31 +109,17 @@ export default function CreatorStudioEvolution() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Display */}
           <div className="lg:col-span-2 space-y-6">
+            
             {/* Content Preview */}
+            
             <div className="glass-effect rounded-2xl overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-purple-600/20 to-pink-600/20 relative">
-                {profile.uploadedContent?.type?.startsWith("image") && (
-                  <img
-                    src={profile.uploadedContent.url}
-                    alt={profile.contentTitle}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                {profile.uploadedContent?.type?.startsWith("video") && (
-                  <video
-                    src={profile.uploadedContent.url}
-                    className="w-full h-full object-cover"
-                    controls
-                  />
-                )}
-                {profile.uploadedContent?.type?.startsWith("audio") && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <Volume2 className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-                      <audio src={profile.uploadedContent.url} controls />
-                    </div>
-                  </div>
-                )}
+              <div className="aspect-video relative p-8">
+                <Image
+                  src={smile}
+                  alt={profile.contentTitle}
+                  fill
+                  className="object-contain"
+                />
 
                 <div className="absolute top-4 right-4 px-3 py-1 bg-purple-500 rounded-full text-xs text-white flex items-center space-x-1">
                   <Sparkles className="w-3 h-3" />
@@ -297,6 +285,7 @@ export default function CreatorStudioEvolution() {
                   <div className="flex items-center justify-between">
                     <span className="text-white">Evolution Rules</span>
                     <Sparkles className="w-4 h-4 text-gray-400" />
+                    <Image src={smile} alt="smile" width={16} height={16} />
                   </div>
                 </button>
               </div>
