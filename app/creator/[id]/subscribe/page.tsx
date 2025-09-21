@@ -176,17 +176,6 @@ export default function SubscribePage({
             </div>
           </div>
 
-          {!walletConnected && (
-            <button
-              onClick={() =>
-                document.getElementById("connect-wallet-btn")?.click()
-              }
-              className="px-4 py-2 bg-purple-500 rounded-lg text-white hover:bg-purple-600 transition flex items-center space-x-2"
-            >
-              <Wallet className="w-4 h-4" />
-              <span>Connect Wallet</span>
-            </button>
-          )}
         </div>
 
         {/* NFT Tiers */}

@@ -129,10 +129,10 @@ export function CreatorCard({
             View Profile
           </button>
           <button
-            onClick={() => router.push(`/auctions`)}
+            onClick={() => router.push(`/creator/${creator.id}/subscribe`)}
             className="flex-1 py-2 text-sm text-center text-purple-400 hover:text-purple-300 transition"
           >
-            Join Auction
+            Subscribe
           </button>
         </div>
       </div>
