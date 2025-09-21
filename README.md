@@ -232,14 +232,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Website**: [krill.io](https://krill.io)
 - **Twitter**: [@KrillProtocol](https://twitter.com/KrillProtocol)
 - **Discord**: [Join our community](https://discord.gg/krill)
-- **Email**: team@krill.io
-
-## **⚡ Quick Links**
-
-- [Documentation](https://docs.krill.io)
-- [Whitepaper](https://krill.io/whitepaper.pdf)
-- [Audit Reports](https://github.com/krill/audits)
-- [Brand Assets](https://github.com/krill/brand)
+- **Email**: lisakyoung@c16layer.xyz
+- **Demo**: https://youtu.be/vhLOcSj6-e0?si=_GhALuBEH4JAfVXd
 
 ---
 
